@@ -18,6 +18,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -36,11 +37,16 @@ func WaitForVolumeDetach(ctx context.Context, client *goproxmox.APIClient, vmID 
 		return nil
 	}
 
-	for {
-		time.Sleep(5 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 
+	for {
 		vmConfig, err := client.GetVMConfig(ctx, vmID)
 		if err != nil {
+			if errors.Is(err, goproxmox.ErrVirtualMachineNotFound) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to get vm config for VMID %d: %v", vmID, err)
 		}
 
@@ -57,6 +63,12 @@ func WaitForVolumeDetach(ctx context.Context, client *goproxmox.APIClient, vmID 
 
 		if !found {
 			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
 		}
 	}
 }

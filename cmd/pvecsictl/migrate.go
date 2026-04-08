@@ -29,7 +29,6 @@ import (
 	pxpool "github.com/sergelogvinov/proxmox-csi-plugin/pkg/proxmoxpool"
 	tools "github.com/sergelogvinov/proxmox-csi-plugin/pkg/tools/kubernetes"
 	toolsproxmox "github.com/sergelogvinov/proxmox-csi-plugin/pkg/tools/proxmox"
-	provider "github.com/sergelogvinov/proxmox-csi-plugin/pkg/utils/provider"
 	volume "github.com/sergelogvinov/proxmox-csi-plugin/pkg/utils/volume"
 
 	rbacv1 "k8s.io/api/authorization/v1"
@@ -106,6 +105,25 @@ func (c *migrateCmd) runMigration(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to find pods using pvc: %v", err)
 	}
 
+	// Resolve the Proxmox VM ID before the force-drain path so we capture
+	// the node while it is still reachable. Uses providerID first, then
+	// falls back to the proxmox.sinextra.dev/instance-id annotation.
+	var vmID int
+
+	if vmName != "" {
+		kubeNode, nodeErr := c.kclient.CoreV1().Nodes().Get(ctx, vmName, metav1.GetOptions{})
+		if nodeErr != nil {
+			return fmt.Errorf("failed to get kubernetes node %s: %v", vmName, nodeErr)
+		}
+
+		vmID, nodeErr = csi.ProxmoxVMIDbyNode(kubeNode)
+		if nodeErr != nil {
+			return fmt.Errorf("failed to resolve Proxmox VMID from node %s: %v", vmName, nodeErr)
+		}
+
+		logger.Infof("resolved kubernetes node %s to Proxmox VMID %d", vmName, vmID)
+	}
+
 	cordonedNodes := []string{}
 
 	if len(pods) > 0 {
@@ -154,25 +172,6 @@ func (c *migrateCmd) runMigration(cmd *cobra.Command, args []string) error {
 		} else {
 			return fmt.Errorf("persistentvolumeclaims is using by pods: %s on node %s, cannot move volume", strings.Join(pods, ","), vmName)
 		}
-	}
-
-	// Resolve the Proxmox VM ID from the Kubernetes node's providerID.
-	// The K8s node name (vmName) may not match the Proxmox VM name,
-	// so we use the providerID (format: proxmox://region/VMID) instead.
-	var vmID int
-
-	if vmName != "" {
-		kubeNode, nodeErr := c.kclient.CoreV1().Nodes().Get(ctx, vmName, metav1.GetOptions{})
-		if nodeErr != nil {
-			return fmt.Errorf("failed to get kubernetes node %s: %v", vmName, nodeErr)
-		}
-
-		vmID, nodeErr = provider.GetVMID(kubeNode.Spec.ProviderID)
-		if nodeErr != nil {
-			return fmt.Errorf("failed to resolve Proxmox VMID from node %s providerID %q: %v", vmName, kubeNode.Spec.ProviderID, nodeErr)
-		}
-
-		logger.Infof("resolved kubernetes node %s to Proxmox VMID %d", vmName, vmID)
 	}
 
 	if err = toolsproxmox.WaitForVolumeDetach(ctx, cluster, vmID, vol.Disk()); err != nil {
@@ -249,6 +248,7 @@ func (c *migrateCmd) migrationValidate(cmd *cobra.Command, _ []string) error {
 		{Group: "", Namespace: "", Resource: "persistentvolumes", Verb: "create"},
 		{Group: "", Namespace: "", Resource: "persistentvolumes", Verb: "delete"},
 		{Group: "", Namespace: "", Resource: "pods", Verb: "delete"},
+		{Group: "", Namespace: "", Resource: "nodes", Verb: "get"},
 		{Group: "", Namespace: "", Resource: "nodes", Verb: "patch"},
 	}
 
