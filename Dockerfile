@@ -1,7 +1,7 @@
-# syntax = docker/dockerfile:1.22
+# syntax = docker/dockerfile:1.22@sha256:4a43a54dd1fedceb30ba47e76cfcf2b47304f4161c0caeac2db1c61804ea3c91
 ########################################
 
-FROM golang:1.26.1-trixie AS develop
+FROM golang:1.26.1-trixie@sha256:1d414b0376b53ec94b9a2493229adb81df8b90af014b18619732f1ceaaf7234a AS develop
 
 WORKDIR /src
 COPY ["go.mod", "go.sum", "/src/"]
@@ -9,7 +9,7 @@ RUN go mod download
 
 ########################################
 
-FROM --platform=${BUILDPLATFORM} golang:1.26.1-alpine3.23 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.26.1-alpine3.23@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 AS builder
 RUN apk update && apk add --no-cache make git
 ENV GO111MODULE=on
 WORKDIR /src
@@ -30,7 +30,7 @@ LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI plugin"
 
-COPY --from=gcr.io/distroless/static-debian13:nonroot . .
+COPY --from=gcr.io/distroless/static-debian13:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39 . .
 ARG TARGETARCH
 COPY --from=builder /src/bin/proxmox-csi-controller-${TARGETARCH} /bin/proxmox-csi-controller
 
@@ -38,7 +38,7 @@ ENTRYPOINT ["/bin/proxmox-csi-controller"]
 
 ########################################
 
-FROM --platform=${TARGETARCH} debian:13.4 AS tools
+FROM --platform=${TARGETARCH} debian:13.4@sha256:3352c2e13876c8a5c5873ef20870e1939e73cb9a3c1aeba5e3e72172a85ce9ed AS tools
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -55,7 +55,7 @@ RUN /tools/deps.sh
 
 ########################################
 
-FROM --platform=${TARGETARCH} gcr.io/distroless/base-debian13 AS tools-check
+FROM --platform=${TARGETARCH} gcr.io/distroless/base-debian13@sha256:b0510424f0c7c1d6fdae75ef5c1d349fa72d312e96f69728fad6beb04755b8b4 AS tools-check
 
 COPY --from=tools /bin/sh /bin/sh
 COPY --from=tools /tools/ /tools/
@@ -71,7 +71,7 @@ LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI plugin"
 
-COPY --from=gcr.io/distroless/base-debian13 . .
+COPY --from=gcr.io/distroless/base-debian13@sha256:b0510424f0c7c1d6fdae75ef5c1d349fa72d312e96f69728fad6beb04755b8b4 . .
 COPY --from=tools /dest/ /
 
 ARG TARGETARCH
@@ -81,7 +81,7 @@ ENTRYPOINT ["/bin/proxmox-csi-node"]
 
 ########################################
 
-FROM alpine:3.23 AS pvecsictl
+FROM alpine:3.23@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS pvecsictl
 LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-csi-plugin" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI tools"
@@ -93,7 +93,7 @@ ENTRYPOINT ["/bin/pvecsictl"]
 
 ########################################
 
-FROM alpine:3.23 AS pvecsictl-goreleaser
+FROM alpine:3.23@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS pvecsictl-goreleaser
 LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-csi-plugin" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI tools"
