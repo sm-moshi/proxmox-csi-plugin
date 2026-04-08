@@ -17,6 +17,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sergelogvinov/go-proxmox v0.1.1-0.20260114043701-a813c5df5a79
 	github.com/siderolabs/go-blockdevice v0.4.8
+	github.com/siderolabs/go-blockdevice/v2 v2.0.28
 	github.com/siderolabs/go-retry v0.3.3
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
