@@ -214,7 +214,7 @@ func prepareReplication(ctx context.Context, cl *goproxmox.APIClient, node strin
 		// Wait for the VM to become available via the API.
 		// Proxmox may not return the VM immediately after creation.
 		if err = waitForVM(ctx, cl, id); err != nil {
-			return 0, fmt.Errorf("vm %d not available after creation: %v", id, err)
+			return 0, fmt.Errorf("vm %d not available after creation: %w", id, err)
 		}
 
 		return id, nil
@@ -228,11 +228,16 @@ func prepareReplication(ctx context.Context, cl *goproxmox.APIClient, node strin
 // queries due to internal propagation delays in the Proxmox cluster.
 func waitForVM(ctx context.Context, cl *goproxmox.APIClient, id int) error {
 	return retry.Constant(TaskTimeout*time.Second, retry.WithUnits(TaskStatusCheckInterval*time.Second)).Retry(func() error {
-		if _, err := cl.GetVMConfig(ctx, id); err != nil {
-			return retry.ExpectedError(fmt.Errorf("waiting for vm %d to become available: %v", id, err))
+		_, err := cl.GetVMConfig(ctx, id)
+		if err == nil {
+			return nil
 		}
 
-		return nil
+		if errors.Is(err, goproxmox.ErrVirtualMachineNotFound) {
+			return retry.ExpectedError(fmt.Errorf("waiting for vm %d to become available: %w", id, err))
+		}
+
+		return fmt.Errorf("failed to query vm %d: %w", id, err)
 	})
 }
 
