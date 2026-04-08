@@ -18,6 +18,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -29,24 +30,24 @@ import (
 )
 
 // WaitForVolumeDetach waits for the volume to be detached from the VM.
-func WaitForVolumeDetach(ctx context.Context, client *goproxmox.APIClient, vmName string, pvc string) error {
-	if vmName == "" {
+// vmID is the Proxmox VM ID of the Kubernetes node that was using the volume.
+// If vmID is 0, the check is skipped (volume was not in use).
+func WaitForVolumeDetach(ctx context.Context, client *goproxmox.APIClient, vmID int, pvc string) error {
+	if vmID == 0 {
 		return nil
 	}
 
-	vmr, err := client.GetVMByFilter(ctx, func(r *proxmox.ClusterResource) (bool, error) {
-		return r.Name == vmName, nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to find vm by name %s: %v", vmName, err)
-	}
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 
 	for {
-		time.Sleep(5 * time.Second)
-
-		vmConfig, err := client.GetVMConfig(ctx, int(vmr.VMID))
+		vmConfig, err := client.GetVMConfig(ctx, vmID)
 		if err != nil {
-			return fmt.Errorf("failed to get vm config: %v", err)
+			if errors.Is(err, goproxmox.ErrVirtualMachineNotFound) {
+				return nil
+			}
+
+			return fmt.Errorf("failed to get vm config for VMID %d: %v", vmID, err)
 		}
 
 		found := false
@@ -62,6 +63,12 @@ func WaitForVolumeDetach(ctx context.Context, client *goproxmox.APIClient, vmNam
 
 		if !found {
 			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
 		}
 	}
 }

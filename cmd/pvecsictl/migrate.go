@@ -105,6 +105,25 @@ func (c *migrateCmd) runMigration(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to find pods using pvc: %v", err)
 	}
 
+	// Resolve the Proxmox VM ID before the force-drain path so we capture
+	// the node while it is still reachable. Uses providerID first, then
+	// falls back to the proxmox.sinextra.dev/instance-id annotation.
+	var vmID int
+
+	if vmName != "" {
+		kubeNode, nodeErr := c.kclient.CoreV1().Nodes().Get(ctx, vmName, metav1.GetOptions{})
+		if nodeErr != nil {
+			return fmt.Errorf("failed to get kubernetes node %s: %v", vmName, nodeErr)
+		}
+
+		vmID, nodeErr = csi.ProxmoxVMIDbyNode(kubeNode)
+		if nodeErr != nil {
+			return fmt.Errorf("failed to resolve Proxmox VMID from node %s: %v", vmName, nodeErr)
+		}
+
+		logger.Infof("resolved kubernetes node %s to Proxmox VMID %d", vmName, vmID)
+	}
+
 	cordonedNodes := []string{}
 
 	if len(pods) > 0 {
@@ -155,7 +174,7 @@ func (c *migrateCmd) runMigration(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err = toolsproxmox.WaitForVolumeDetach(ctx, cluster, vmName, vol.Disk()); err != nil {
+	if err = toolsproxmox.WaitForVolumeDetach(ctx, cluster, vmID, vol.Disk()); err != nil {
 		return fmt.Errorf("failed to wait for volume detach: %v", err)
 	}
 
@@ -229,6 +248,7 @@ func (c *migrateCmd) migrationValidate(cmd *cobra.Command, _ []string) error {
 		{Group: "", Namespace: "", Resource: "persistentvolumes", Verb: "create"},
 		{Group: "", Namespace: "", Resource: "persistentvolumes", Verb: "delete"},
 		{Group: "", Namespace: "", Resource: "pods", Verb: "delete"},
+		{Group: "", Namespace: "", Resource: "nodes", Verb: "get"},
 		{Group: "", Namespace: "", Resource: "nodes", Verb: "patch"},
 	}
 
