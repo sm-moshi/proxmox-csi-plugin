@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - sm-moshi/main
     paths:
       - "go.mod"
       - "go.sum"

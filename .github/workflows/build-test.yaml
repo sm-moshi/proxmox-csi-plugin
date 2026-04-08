@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - sm-moshi/main
     paths:
       - "go.mod"
       - "go.sum"

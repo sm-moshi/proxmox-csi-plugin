@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - sm-moshi/main
 
 jobs:
   conform:
@@ -17,8 +18,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Checkout main branch
-        run: git fetch --no-tags origin main:main
+      - name: Checkout base branch
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: git fetch --no-tags origin "${BASE_REF}:${BASE_REF}"
 
       - name: Conform action
         uses: talos-systems/conform@v0.1.0-alpha.31
