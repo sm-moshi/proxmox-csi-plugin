@@ -29,6 +29,7 @@ import (
 	pxpool "github.com/sergelogvinov/proxmox-csi-plugin/pkg/proxmoxpool"
 	tools "github.com/sergelogvinov/proxmox-csi-plugin/pkg/tools/kubernetes"
 	toolsproxmox "github.com/sergelogvinov/proxmox-csi-plugin/pkg/tools/proxmox"
+	provider "github.com/sergelogvinov/proxmox-csi-plugin/pkg/utils/provider"
 	volume "github.com/sergelogvinov/proxmox-csi-plugin/pkg/utils/volume"
 
 	rbacv1 "k8s.io/api/authorization/v1"
@@ -155,7 +156,26 @@ func (c *migrateCmd) runMigration(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err = toolsproxmox.WaitForVolumeDetach(ctx, cluster, vmName, vol.Disk()); err != nil {
+	// Resolve the Proxmox VM ID from the Kubernetes node's providerID.
+	// The K8s node name (vmName) may not match the Proxmox VM name,
+	// so we use the providerID (format: proxmox://region/VMID) instead.
+	var vmID int
+
+	if vmName != "" {
+		kubeNode, nodeErr := c.kclient.CoreV1().Nodes().Get(ctx, vmName, metav1.GetOptions{})
+		if nodeErr != nil {
+			return fmt.Errorf("failed to get kubernetes node %s: %v", vmName, nodeErr)
+		}
+
+		vmID, nodeErr = provider.GetVMID(kubeNode.Spec.ProviderID)
+		if nodeErr != nil {
+			return fmt.Errorf("failed to resolve Proxmox VMID from node %s providerID %q: %v", vmName, kubeNode.Spec.ProviderID, nodeErr)
+		}
+
+		logger.Infof("resolved kubernetes node %s to Proxmox VMID %d", vmName, vmID)
+	}
+
+	if err = toolsproxmox.WaitForVolumeDetach(ctx, cluster, vmID, vol.Disk()); err != nil {
 		return fmt.Errorf("failed to wait for volume detach: %v", err)
 	}
 
