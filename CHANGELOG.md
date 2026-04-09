@@ -5,6 +5,13 @@
 
 * enable support for capmox ([6145c7d](https://github.com/sergelogvinov/proxmox-csi-plugin/commit/6145c7d91cfc47c131ac453e2a90a915e5694b2b))
 
+## [0.18.2](https://github.com/sergelogvinov/proxmox-csi-plugin/compare/v0.18.1...v0.18.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* resolve VMID from node providerID instead of VM name ([6963566](https://github.com/sergelogvinov/proxmox-csi-plugin/commit/6963566e827cbc6950d8b90e44e375df704dfc26))
+
 ## [0.18.1](https://github.com/sergelogvinov/proxmox-csi-plugin/compare/v0.18.0...v0.18.1) (2026-04-04)
 
 
