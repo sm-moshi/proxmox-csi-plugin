@@ -55,7 +55,7 @@ RUN /tools/deps.sh
 
 ########################################
 
-FROM --platform=${TARGETARCH} gcr.io/distroless/base-debian13@sha256:b0510424f0c7c1d6fdae75ef5c1d349fa72d312e96f69728fad6beb04755b8b4 AS tools-check
+FROM --platform=${TARGETARCH} gcr.io/distroless/base-debian13@sha256:c83f022002fc917a92501a8c30c605efdad3010157ba2c8998a2cbf213299201 AS tools-check
 
 COPY --from=tools /bin/sh /bin/sh
 COPY --from=tools /tools/ /tools/
@@ -71,7 +71,7 @@ LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI plugin"
 
-COPY --from=gcr.io/distroless/base-debian13@sha256:b0510424f0c7c1d6fdae75ef5c1d349fa72d312e96f69728fad6beb04755b8b4 . .
+COPY --from=gcr.io/distroless/base-debian13@sha256:c83f022002fc917a92501a8c30c605efdad3010157ba2c8998a2cbf213299201 . .
 COPY --from=tools /dest/ /
 
 ARG TARGETARCH
