@@ -81,7 +81,7 @@ ENTRYPOINT ["/bin/proxmox-csi-node"]
 
 ########################################
 
-FROM alpine:3.23@sha256:c69a6ff7c24d1ffa913798501d0e7104e0e9764e28eb44a930939f91ef829e64 AS pvecsictl
+FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS pvecsictl
 LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-csi-plugin" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI tools"
@@ -93,7 +93,7 @@ ENTRYPOINT ["/bin/pvecsictl"]
 
 ########################################
 
-FROM alpine:3.23@sha256:c69a6ff7c24d1ffa913798501d0e7104e0e9764e28eb44a930939f91ef829e64 AS pvecsictl-goreleaser
+FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS pvecsictl-goreleaser
 LABEL org.opencontainers.image.source="https://github.com/sergelogvinov/proxmox-csi-plugin" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Proxmox VE CSI tools"
